@@ -218,14 +218,19 @@ analysis in the next four tasks:
 
 <!-------------------------- Start your work below ---------------------------->
 
-1.  *FILL_THIS_IN*
-2.  *FILL_THIS_IN*
+1.  *Do malignant and benign tumors have different sizes?*
+2.  *Is there distribution difference between M vs B in each variable?*
 
 <!----------------------------------------------------------------------------->
 
 Explain your decision for choosing the above two research questions.
 
 <!--------------------------- Start your work below --------------------------->
+
+I chose *1* because it is easy to test (t-test) and helps give some
+intuition of the relationship between tumor size and diagnosis. I chose
+*2* because this is easy to visualize using plots. (we may only focus on
+certain variables)
 <!----------------------------------------------------------------------------->
 
 Now, try to choose a version of your data that you think will be
@@ -234,6 +239,49 @@ that we’ve covered so far (i.e. by filtering, cleaning, tidy’ing,
 dropping irrelevant columns, etc.).
 
 <!--------------------------- Start your work below --------------------------->
+
+``` r
+#leaving only radius and concavity for fulture analysis
+reduced_cancer <- cancer_sample %>% select(diagnosis, radius_mean, smoothness_mean, concavity_mean, concave_points_mean)
+
+#changing characters to numeric
+reduced_cancer <- reduced_cancer %>% mutate(across(all_of("concavity_mean"), as.numeric),
+       across(all_of("concave_points_mean"), as.numeric))
+
+#remove outliers
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(radius_mean - median(radius_mean)) > 2*sd(radius_mean)))
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(smoothness_mean - median(smoothness_mean)) > 2*sd(smoothness_mean)))
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(concavity_mean - median(concavity_mean)) > 2*sd(concavity_mean))) 
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(concave_points_mean - median(concave_points_mean)) > 2*sd(concave_points_mean)))
+
+##arrange diagnosis and radius
+reduced_cancer <- reduced_cancer %>% arrange(reduced_cancer, diagnosis, radius_mean)
+
+reduced_cancer
+```
+
+    ## # A tibble: 427 × 5
+    ##    diagnosis radius_mean smoothness_mean concavity_mean concave_points_mean
+    ##    <chr>           <dbl>           <dbl>          <dbl>               <dbl>
+    ##  1 B                6.98          0.117          0                  0      
+    ##  2 B                7.69          0.0867         0.0925             0.0136 
+    ##  3 B                7.73          0.0810         0                  0      
+    ##  4 B                8.20          0.086          0.0159             0.00592
+    ##  5 B                8.22          0.0940         0.132              0.0217 
+    ##  6 B                8.57          0.104          0.0256             0.0151 
+    ##  7 B                8.60          0.107          0                  0      
+    ##  8 B                8.62          0.0975         0.0206             0.00780
+    ##  9 B                8.67          0.0914         0                  0      
+    ## 10 B                8.73          0.115          0.0413             0.0192 
+    ## # … with 417 more rows
+
 <!----------------------------------------------------------------------------->
 
 # Task 2: Special Data Types (10)
@@ -249,6 +297,32 @@ you’d like). If you don’t have such a plot, you’ll need to make one.
 Place the code for your plot below.
 
 <!-------------------------- Start your work below ---------------------------->
+
+I am choosing the first plot for mini-project-1. Output may be different
+because we removed outliers in this analysis. On top of scatterplot, I
+added boxplots to better visualize the distribution between different
+groups.
+
+``` r
+#create categorical variables based on radius (size)
+reduced_cancer$size <- cut(reduced_cancer$radius_mean,
+                       breaks=c(0, 10, 15, 20, 25, 30),
+                       labels=c('very small', 'small', 'medium', 'large', 'very large'))
+head(reduced_cancer$size)
+```
+
+    ## [1] very small very small very small very small very small very small
+    ## Levels: very small small medium large very large
+
+``` r
+#plot size against smoothness, separated by diagnosis. jitter to see points better
+ggplot(reduced_cancer, aes(x=size, y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
+
+![](mini-project-2_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
 <!----------------------------------------------------------------------------->
 
 Now, choose two of the following tasks.
@@ -292,12 +366,32 @@ Now, choose two of the following tasks.
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**1**: I reorder the plots so that smoothness_mean in each group are in
+ascending order. I used this function to better visualize the
+distribution differences in each size group.
+
+``` r
+ggplot(reduced_cancer, aes(x=fct_reorder(size, smoothness_mean), y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
+
+![](mini-project-2_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 <!----------------------------------------------------------------------------->
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**2**: I grouped “large”, “very large” and “very small” into “others”
+group since they have very few data points.
+
+``` r
+reduced_cancer$size <- fct_other(reduced_cancer$size, keep = c("medium", "small"))
+ggplot(reduced_cancer, aes(x=fct_reorder(size, smoothness_mean), y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
+
+![](mini-project-2_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 <!----------------------------------------------------------------------------->
 
@@ -344,8 +438,8 @@ t-test based on benign vs malignant radius mean. H0: mu_benign ==
 mu_malignant HA: mu_benign != mu_malignant
 
 ``` r
-benign_radius <- cancer_sample %>% filter(diagnosis == "B") %>% pull(radius_mean)
-malignant_radius <- cancer_sample %>% filter(diagnosis == "M") %>% pull(radius_mean)
+benign_radius <- reduced_cancer %>% filter(diagnosis == "B") %>% pull(radius_mean)
+malignant_radius <- reduced_cancer %>% filter(diagnosis == "M") %>% pull(radius_mean)
 radius_test <- t.test(benign_radius, malignant_radius)
 radius_test
 ```
@@ -354,13 +448,13 @@ radius_test
     ##  Welch Two Sample t-test
     ## 
     ## data:  benign_radius and malignant_radius
-    ## t = -22.209, df = 289.71, p-value < 2.2e-16
+    ## t = -13.743, df = 115.6, p-value < 2.2e-16
     ## alternative hypothesis: true difference in means is not equal to 0
     ## 95 percent confidence interval:
-    ##  -5.787448 -4.845165
+    ##  -3.943522 -2.950017
     ## sample estimates:
     ## mean of x mean of y 
-    ##  12.14652  17.46283
+    ##  12.18553  15.63230
 
 <!----------------------------------------------------------------------------->
 
@@ -392,7 +486,7 @@ test_summary
     ## # A tibble: 1 × 10
     ##   mean_difference benign_radius_m… malignant_radiu… statistic  p.value parameter
     ##             <dbl>            <dbl>            <dbl>     <dbl>    <dbl>     <dbl>
-    ## 1           -5.32             12.1             17.5     -22.2 1.68e-64      290.
+    ## 1           -3.45             12.2             15.6     -13.7 4.57e-26      116.
     ## # … with 4 more variables: conf.low <dbl>, conf.high <dbl>, method <chr>,
     ## #   alternative <chr>
 
@@ -447,6 +541,20 @@ Use the functions `saveRDS()` and `readRDS()`.
     here.
 
 <!-------------------------- Start your work below ---------------------------->
+
+``` r
+saveRDS(test_summary, "mini_project_result.rds")
+test_summary_read <- readRDS("mini_project_result.rds")
+test_summary_read
+```
+
+    ## # A tibble: 1 × 10
+    ##   mean_difference benign_radius_m… malignant_radiu… statistic  p.value parameter
+    ##             <dbl>            <dbl>            <dbl>     <dbl>    <dbl>     <dbl>
+    ## 1           -3.45             12.2             15.6     -13.7 4.57e-26      116.
+    ## # … with 4 more variables: conf.low <dbl>, conf.high <dbl>, method <chr>,
+    ## #   alternative <chr>
+
 <!----------------------------------------------------------------------------->
 
 # Tidy Repository
