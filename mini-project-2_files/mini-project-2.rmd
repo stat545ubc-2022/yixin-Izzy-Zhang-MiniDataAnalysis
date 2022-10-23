@@ -303,8 +303,8 @@ Write your model object from Task 3 to an R binary file (an RDS), and load it ag
 
 <!-------------------------- Start your work below ---------------------------->
 ```{r}
-saveRDS(test_summary, "mini_project_result.rds")
-test_summary_read <- readRDS("mini_project_result.rds")
+saveRDS(test_summary, here::here("output", "mini_project_result.rds"))
+test_summary_read <- readRDS(here::here("output", "mini_project_result.rds"))
 test_summary_read
 ```
 

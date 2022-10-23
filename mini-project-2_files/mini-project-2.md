@@ -543,8 +543,8 @@ Use the functions `saveRDS()` and `readRDS()`.
 <!-------------------------- Start your work below ---------------------------->
 
 ``` r
-saveRDS(test_summary, "mini_project_result.rds")
-test_summary_read <- readRDS("mini_project_result.rds")
+saveRDS(test_summary, here::here("output", "mini_project_result.rds"))
+test_summary_read <- readRDS(here::here("output", "mini_project_result.rds"))
 test_summary_read
 ```
 
