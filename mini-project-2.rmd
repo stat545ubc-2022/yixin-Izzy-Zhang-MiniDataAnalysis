@@ -104,20 +104,48 @@ Now, you should be more familiar with your data, and also have made progress in 
 
 <!-------------------------- Start your work below ---------------------------->
 
-1.  *FILL_THIS_IN*
-2.  *FILL_THIS_IN*
+1.  *Do malignant and benign tumors have different sizes?*
+2.  *Is there distribution difference between M vs B in each variable?*
 
 <!----------------------------------------------------------------------------->
 
 Explain your decision for choosing the above two research questions.
 
 <!--------------------------- Start your work below --------------------------->
-
+I chose *1* because it is easy to test (t-test) and helps give some intuition of the relationship between tumor size and diagnosis. 
+I chose *2* because this is easy to visualize using plots. (we may only focus on certain variables)
 <!----------------------------------------------------------------------------->
 
 Now, try to choose a version of your data that you think will be appropriate to answer these 2 questions. Use between 4 and 8 functions that we've covered so far (i.e. by filtering, cleaning, tidy'ing, dropping irrelevant columns, etc.).
 
 <!--------------------------- Start your work below --------------------------->
+```{r}
+#leaving only radius and concavity for fulture analysis
+reduced_cancer <- cancer_sample %>% select(diagnosis, radius_mean, smoothness_mean, concavity_mean, concave_points_mean)
+
+#changing characters to numeric
+reduced_cancer <- reduced_cancer %>% mutate(across(all_of("concavity_mean"), as.numeric),
+       across(all_of("concave_points_mean"), as.numeric))
+
+#remove outliers
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(radius_mean - median(radius_mean)) > 2*sd(radius_mean)))
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(smoothness_mean - median(smoothness_mean)) > 2*sd(smoothness_mean)))
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(concavity_mean - median(concavity_mean)) > 2*sd(concavity_mean))) 
+
+reduced_cancer <- reduced_cancer %>%
+  filter(!(abs(concave_points_mean - median(concave_points_mean)) > 2*sd(concave_points_mean)))
+
+##arrange diagnosis and radius
+reduced_cancer <- reduced_cancer %>% arrange(reduced_cancer, diagnosis, radius_mean)
+
+reduced_cancer
+
+```
 
 <!----------------------------------------------------------------------------->
 
@@ -128,6 +156,21 @@ For this exercise, you'll be choosing two of the three tasks below -- both tasks
 But first, tasks 1 and 2 below ask you to modify a plot you made in a previous milestone. The plot you choose should involve plotting across at least three groups (whether by facetting, or using an aesthetic like colour). Place this plot below (you're allowed to modify the plot if you'd like). If you don't have such a plot, you'll need to make one. Place the code for your plot below.
 
 <!-------------------------- Start your work below ---------------------------->
+I am choosing the first plot for mini-project-1. Output may be different because we removed outliers in this analysis.
+On top of scatterplot, I added boxplots to better visualize the distribution between different groups. 
+```{r}
+#create categorical variables based on radius (size)
+reduced_cancer$size <- cut(reduced_cancer$radius_mean,
+                       breaks=c(0, 10, 15, 20, 25, 30),
+                       labels=c('very small', 'small', 'medium', 'large', 'very large'))
+head(reduced_cancer$size)
+
+
+#plot size against smoothness, separated by diagnosis. jitter to see points better
+ggplot(reduced_cancer, aes(x=size, y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
 
 <!----------------------------------------------------------------------------->
 
@@ -150,13 +193,28 @@ Now, choose two of the following tasks.
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**1**: I reorder the plots so that smoothness_mean in each group are in ascending order. I used this function to better visualize the distribution differences in each size group.  
+
+```{r}
+ggplot(reduced_cancer, aes(x=fct_reorder(size, smoothness_mean), y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
+
 
 <!----------------------------------------------------------------------------->
 
 <!-------------------------- Start your work below ---------------------------->
 
-**Task Number**: FILL_THIS_IN
+**2**: I grouped "large", "very large" and "very small" into "others" group since they have very few data points. 
+
+```{r}
+reduced_cancer$size <- fct_other(reduced_cancer$size, keep = c("medium", "small"))
+ggplot(reduced_cancer, aes(x=fct_reorder(size, smoothness_mean), y = smoothness_mean)) + 
+  geom_boxplot()+
+  geom_jitter(aes(color = diagnosis), alpha = 0.6)
+```
+
 
 <!----------------------------------------------------------------------------->
 
@@ -189,8 +247,8 @@ t-test based on benign vs malignant radius mean.
 H0: mu_benign == mu_malignant
 HA: mu_benign != mu_malignant
 ```{r}
-benign_radius <- cancer_sample %>% filter(diagnosis == "B") %>% pull(radius_mean)
-malignant_radius <- cancer_sample %>% filter(diagnosis == "M") %>% pull(radius_mean)
+benign_radius <- reduced_cancer %>% filter(diagnosis == "B") %>% pull(radius_mean)
+malignant_radius <- reduced_cancer %>% filter(diagnosis == "M") %>% pull(radius_mean)
 radius_test <- t.test(benign_radius, malignant_radius)
 radius_test
 ```
@@ -244,6 +302,11 @@ Write your model object from Task 3 to an R binary file (an RDS), and load it ag
 -   The same robustness and reproducibility criteria as in 3.1 apply here.
 
 <!-------------------------- Start your work below ---------------------------->
+```{r}
+saveRDS(test_summary, "mini_project_result.rds")
+test_summary_read <- readRDS("mini_project_result.rds")
+test_summary_read
+```
 
 <!----------------------------------------------------------------------------->
 
